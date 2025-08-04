@@ -10,7 +10,6 @@
     "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key"
   },
   "regions": ["iad1"],
-  "functions": {},
   "rewrites": [
     {
       "source": "/(.*)",
