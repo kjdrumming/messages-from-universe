@@ -1,0 +1,155 @@
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
+import { auth } from '@/lib/auth';
+import { toast } from 'sonner';
+
+const AuthCallback = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      try {
+        console.log('🔍 Auth callback starting...');
+        console.log('🔍 Current URL:', window.location.href);
+        console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
+
+        // Try to exchange the URL hash for a session
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ Auth callback error:', error);
+          
+          // Try to get session from URL if getSession failed
+          const urlParams = new URLSearchParams(window.location.search);
+          const refreshToken = urlParams.get('refresh_token');
+          const accessToken = urlParams.get('access_token');
+          
+          if (refreshToken && accessToken) {
+            console.log('🔍 Trying to set session from URL params...');
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            
+            if (sessionError) {
+              console.error('❌ Failed to set session:', sessionError);
+              toast.error('Authentication failed. Please try again.');
+              navigate('/');
+              return;
+            }
+            
+            console.log('✅ Session set successfully:', sessionData);
+          } else {
+            toast.error('Authentication failed. Please try again.');
+            navigate('/');
+            return;
+          }
+        }
+
+        // Get the latest session
+        const { data: currentSession } = await supabase.auth.getSession();
+        console.log('🔍 Current session:', currentSession);
+
+        if (currentSession.session && currentSession.session.user) {
+          const user = currentSession.session.user;
+          
+          // Get portal from URL parameter (from magic link redirect)
+          const portalFromUrl = searchParams.get('portal') as 'customer' | 'admin' | 'unified' | null;
+          // Also check user metadata as fallback
+          const requestedUserType = portalFromUrl || user.user_metadata?.requested_user_type;
+          
+          console.log('User authenticated:', user.email);
+          console.log('Portal from URL:', portalFromUrl);
+          console.log('Requested user type from metadata:', user.user_metadata?.requested_user_type);
+          console.log('Final portal selection:', requestedUserType);
+          
+          // Get user's current profiles
+          const userProfile = await auth.getUserProfile(user.id);
+          
+          // Handle the requested user type
+          if (requestedUserType === 'unified') {
+            // User clicked unified login link - they should have both account types
+            if (userProfile.isCustomer && userProfile.isAdmin) {
+              toast.success('Welcome back! Please select your portal.');
+              navigate('/?portal=unified');
+            } else if (userProfile.isCustomer && !userProfile.isAdmin) {
+              // Create admin profile for existing customer
+              await auth.createAdminProfile(user.id, user.email!);
+              toast.success('Admin access granted! You now have both Universe Receiver and Messenger accounts.');
+              navigate('/?portal=unified');
+            } else if (!userProfile.isCustomer && userProfile.isAdmin) {
+              // Create customer profile for existing admin
+              await auth.createCustomerProfile(user.id, user.email!);
+              toast.success('Universe Receiver access granted! You now have both accounts.');
+              navigate('/?portal=unified');
+            } else {
+              // New user from unified link - shouldn't happen but create customer by default
+              await auth.createCustomerProfile(user.id, user.email!);
+              toast.success('Welcome! Your universe receiver account has been created.');
+              navigate('/?portal=customer');
+            }
+          } else if (requestedUserType === 'customer') {
+            if (!userProfile.isCustomer) {
+              // Create customer profile if it doesn't exist
+              console.log('Creating customer profile...');
+              await auth.createCustomerProfile(user.id, user.email!);
+              toast.success('Welcome! Your universe receiver account has been created.');
+            } else {
+              toast.success('Welcome back to your universe receiver!');
+            }
+            navigate('/?portal=customer');
+          } else if (requestedUserType === 'admin') {
+            if (!userProfile.isAdmin) {
+              // Create admin profile if it doesn't exist
+              console.log('Creating admin profile...');
+              await auth.createAdminProfile(user.id, user.email!);
+              toast.success('Welcome! Your universe messenger account has been created.');
+            } else {
+              toast.success('Welcome back, Universe Messenger!');
+            }
+            navigate('/?portal=admin');
+          } else {
+            // Fallback: determine based on existing profiles
+            if (userProfile.isCustomer && userProfile.isAdmin) {
+              // User is both - show selection
+              toast.success('Welcome back! Please select your portal.');
+              navigate('/');
+            } else if (userProfile.isCustomer) {
+              navigate('/?portal=customer');
+            } else if (userProfile.isAdmin) {
+              navigate('/?portal=admin');
+            } else {
+              // New user, default to customer
+              await auth.createCustomerProfile(user.id, user.email!);
+              toast.success('Welcome! Your account has been created.');
+              navigate('/?portal=customer');
+            }
+          }
+        } else {
+          toast.error('No session found. Please try signing in again.');
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Unexpected error during auth callback:', error);
+        toast.error('Something went wrong. Please try again.');
+        navigate('/');
+      }
+    };
+
+    handleAuthCallback();
+  }, [navigate]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">Completing Sign In...</h2>
+        <p className="text-gray-600">Please wait while we verify your authentication.</p>
+      </div>
+    </div>
+  );
+};
+
+export default AuthCallback;

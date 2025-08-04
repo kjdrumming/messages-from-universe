@@ -1,0 +1,19 @@
+name: Send Scheduled Notifications
+
+on:
+  schedule:
+    # Run every minute
+    - cron: '* * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Notification Function
+        run: |
+          curl -X POST 'https://yrrxbcsoqwamukarkzqa.supabase.co/functions/v1/cron-trigger' \
+            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
+            -H 'Content-Type: application/json'
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
