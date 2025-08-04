@@ -14,6 +14,7 @@ import { supabase, type CustomerUser } from '@/lib/supabase';
 import { setOneSignalUserId, getOneSignalSubscription } from '@/lib/oneSignal';
 import { NotificationSchedulesManager } from './NotificationSchedulesManager';
 import { NotificationSetup } from './NotificationSetup';
+import { NotificationTestPanel } from './NotificationTestPanel';
 import { SessionManager, withSessionCheck } from '@/lib/session-manager';
 
 interface CustomerAppProps {
@@ -797,6 +798,9 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Notification Test Panel - for debugging */}
+        <NotificationTestPanel />
       </div>
     </div>
   );

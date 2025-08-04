@@ -169,6 +169,12 @@ export const showNotificationPopup = async () => {
   try {
     console.log('🚨 Showing notification permission popup...');
     
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+      console.error('❌ Notifications not supported in this browser');
+      return { success: false, error: 'Notifications not supported' };
+    }
+    
     // Check current permission status
     const currentPermission = Notification.permission;
     console.log('Current permission status:', currentPermission);
@@ -183,10 +189,12 @@ export const showNotificationPopup = async () => {
       return { success: false, error: 'Previously denied - check browser settings' };
     }
     
-    // Request permission
-    const permission = await promptForPushNotifications();
+    // Use native browser API directly (much faster than OneSignal)
+    console.log('🔔 Requesting notification permission with native API...');
+    const permission = await Notification.requestPermission();
+    console.log('🔍 Native permission result:', permission);
     
-    if (permission) {
+    if (permission === 'granted') {
       console.log('✅ Notification permission granted!');
       return { success: true, justGranted: true };
     } else {
@@ -197,6 +205,19 @@ export const showNotificationPopup = async () => {
   } catch (error) {
     console.error('Error showing notification popup:', error);
     return { success: false, error: error.message };
+  }
+};
+
+// Quick test function - call this from browser console to test immediately
+(window as any).testNotificationPopup = async () => {
+  console.log('🧪 Testing notification popup...');
+  try {
+    const result = await Notification.requestPermission();
+    console.log('Permission result:', result);
+    return result;
+  } catch (error) {
+    console.error('Error:', error);
+    return error;
   }
 };
 
