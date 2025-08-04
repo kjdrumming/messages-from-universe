@@ -142,7 +142,23 @@ const AuthCallback = () => {
             if (!userProfile.isCustomer) {
               // Create customer profile if it doesn't exist
               console.log('Creating customer profile...');
-              await auth.createCustomerProfile(user.id, user.email!);
+              const { data: newProfile, error } = await supabase
+                .from('customer_users')
+                .insert({
+                  auth_user_id: user.id,
+                  email: user.email!,
+                  name: user.email!.split('@')[0]
+                })
+                .select()
+                .single();
+
+              if (error) {
+                console.error('Failed to create customer profile:', error);
+                toast.error('Failed to create your account. Please try again.');
+                navigate('/');
+                return;
+              }
+              
               toast.success('Welcome! Your universe receiver account has been created.');
             } else {
               toast.success('Welcome back to your universe receiver!');
@@ -170,7 +186,23 @@ const AuthCallback = () => {
               navigate('/?portal=admin');
             } else {
               // New user, default to customer
-              await auth.createCustomerProfile(user.id, user.email!);
+              const { data: newProfile, error } = await supabase
+                .from('customer_users')
+                .insert({
+                  auth_user_id: user.id,
+                  email: user.email!,
+                  name: user.email!.split('@')[0]
+                })
+                .select()
+                .single();
+
+              if (error) {
+                console.error('Failed to create customer profile:', error);
+                toast.error('Failed to create your account. Please try again.');
+                navigate('/');
+                return;
+              }
+              
               toast.success('Welcome! Your account has been created.');
               navigate('/?portal=customer');
             }

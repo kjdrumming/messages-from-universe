@@ -296,19 +296,8 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
 
       let isNewUserFlag = false;
       if (!existingProfile) {
-        // Create new customer profile - but DON'T auto-subscribe to notifications
-        const { data: newProfile, error } = await supabase
-          .from('customer_users')
-          .insert({
-            auth_user_id: authUserId,
-            email: userEmail,
-            name: userEmail.split('@')[0]
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        
+        // Create new customer profile using the auth function (includes OneSignal setup)
+        await auth.createCustomerProfile(authUserId, userEmail);
         isNewUserFlag = true;
         toast.success('Welcome! Your universe receiver account has been created.');
       } else {
@@ -319,7 +308,7 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
       setIsLoggedIn(true);
       setIsNewUser(isNewUserFlag);
 
-      // Set OneSignal user ID (but don't auto-subscribe)
+      // Set OneSignal user ID (this should already be done by createCustomerProfile, but let's be safe)
       try {
         await setOneSignalUserId(authUserId);
         console.log('✅ OneSignal user ID set for customer:', authUserId);
