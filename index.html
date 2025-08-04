@@ -33,11 +33,17 @@
     <script type="module" src="/src/main.tsx"></script>
     <!-- Global error handler for debugging blank screens -->
     <script>
-      window.addEventListener('error', function(e) {
+      function showError(msg, stack) {
         var root = document.getElementById('root');
-        if (root && e.message) {
-          root.innerHTML = '<div style="padding:2em;color:red;font-size:1.2em;text-align:center;">Error: ' + e.message + '<br><br><pre>' + (e.error ? e.error.stack : '') + '</pre></div>';
+        if (root) {
+          root.innerHTML = '<div style="padding:2em;color:red;font-size:1.2em;text-align:center;">Error: ' + msg + '<br><br><pre>' + (stack || '') + '</pre></div>';
         }
+      }
+      window.addEventListener('error', function(e) {
+        showError(e.message, e.error ? e.error.stack : '');
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        showError(e.reason ? (e.reason.message || e.reason) : 'Unhandled promise rejection', e.reason && e.reason.stack ? e.reason.stack : '');
       });
     </script>
   </body>
