@@ -26,6 +26,19 @@
 
   <body>
     <div id="root"></div>
+    <!-- Fallback for browsers that do not support ES modules (older iOS Safari) -->
+    <script nomodule>
+      document.getElementById('root').innerHTML = '<div style="padding:2em;color:red;font-size:1.2em;text-align:center;">Your browser is not supported. Please update iOS or use a modern browser.</div>';
+    </script>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Global error handler for debugging blank screens -->
+    <script>
+      window.addEventListener('error', function(e) {
+        var root = document.getElementById('root');
+        if (root && e.message) {
+          root.innerHTML = '<div style="padding:2em;color:red;font-size:1.2em;text-align:center;">Error: ' + e.message + '<br><br><pre>' + (e.error ? e.error.stack : '') + '</pre></div>';
+        }
+      });
+    </script>
   </body>
 </html>
