@@ -11,8 +11,9 @@ import { Bell, Heart, Sparkles, User, Settings, Mail, Star, ArrowLeft } from 'lu
 import { toast } from 'sonner';
 import { auth } from '@/lib/auth';
 import { supabase, type CustomerUser } from '@/lib/supabase';
-import { setOneSignalUserId } from '@/lib/oneSignal';
+import { setOneSignalUserId, getOneSignalSubscription } from '@/lib/oneSignal';
 import { NotificationSchedulesManager } from './NotificationSchedulesManager';
+import { NotificationSetup } from './NotificationSetup';
 import { SessionManager, withSessionCheck } from '@/lib/session-manager';
 
 interface CustomerAppProps {
@@ -40,6 +41,8 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
   const [messagesReceived, setMessagesReceived] = useState(0);
   const [daysActive, setDaysActive] = useState(0);
   const [nextMessageTime, setNextMessageTime] = useState<string | null>(null);
+  const [showNotificationSetup, setShowNotificationSetup] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   // Helper function to format days active display
   const formatDaysActive = (days: number): string => {
@@ -291,9 +294,22 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
         .eq('auth_user_id', authUserId)
         .single();
 
+      let isNewUserFlag = false;
       if (!existingProfile) {
-        // Create new customer profile
-        await auth.createCustomerProfile(authUserId, userEmail);
+        // Create new customer profile - but DON'T auto-subscribe to notifications
+        const { data: newProfile, error } = await supabase
+          .from('customer_users')
+          .insert({
+            auth_user_id: authUserId,
+            email: userEmail,
+            name: userEmail.split('@')[0]
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        isNewUserFlag = true;
         toast.success('Welcome! Your universe receiver account has been created.');
       } else {
         toast.success('Welcome back to your universe receiver!');
@@ -301,14 +317,25 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
 
       await loadCustomerProfile(authUserId);
       setIsLoggedIn(true);
+      setIsNewUser(isNewUserFlag);
 
-      // Set OneSignal user ID for push notifications
+      // Set OneSignal user ID (but don't auto-subscribe)
       try {
         await setOneSignalUserId(authUserId);
         console.log('✅ OneSignal user ID set for customer:', authUserId);
+        
+        // Check if user already has notifications enabled
+        const subscription = await getOneSignalSubscription();
+        if (!subscription.isSubscribed && isNewUserFlag) {
+          // New user without notifications - show setup
+          setShowNotificationSetup(true);
+        }
       } catch (oneSignalError) {
         console.warn('⚠️ OneSignal user ID setup failed (non-blocking):', oneSignalError);
-        // Don't block login if OneSignal fails
+        // Still show notification setup for new users
+        if (isNewUserFlag) {
+          setShowNotificationSetup(true);
+        }
       }
     } catch (error) {
       console.error('Error handling auth success:', error);
@@ -630,6 +657,19 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
             </CardContent>
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  // Show notification setup for new users
+  if (showNotificationSetup && customerProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <NotificationSetup
+          userId={customerProfile.auth_user_id}
+          userEmail={customerProfile.email}
+          onComplete={() => setShowNotificationSetup(false)}
+        />
       </div>
     );
   }
