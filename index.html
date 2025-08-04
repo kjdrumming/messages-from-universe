@@ -45,6 +45,24 @@
       window.addEventListener('unhandledrejection', function(e) {
         showError(e.reason ? (e.reason.message || e.reason) : 'Unhandled promise rejection', e.reason && e.reason.stack ? e.reason.stack : '');
       });
+      // Console log to page for debugging
+      (function() {
+        var logDiv = document.createElement('div');
+        logDiv.id = 'console-log-output';
+        logDiv.style = 'background:#222;color:#fff;padding:1em;font-size:1em;max-height:30vh;overflow:auto;white-space:pre-wrap;word-break:break-word;';
+        document.body.appendChild(logDiv);
+        var oldLog = console.log;
+        console.log = function() {
+          var msg = Array.from(arguments).map(function(x) {
+            if (typeof x === 'object') {
+              try { return JSON.stringify(x); } catch(e) { return '[object]'; }
+            }
+            return String(x);
+          }).join(' ');
+          logDiv.innerHTML += msg + '\n';
+          oldLog.apply(console, arguments);
+        };
+      })();
     </script>
   </body>
 </html>
