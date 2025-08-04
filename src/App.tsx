@@ -13,11 +13,25 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Initialize OneSignal when app loads (non-blocking)
-    initializeOneSignal().catch(error => {
-      console.error('OneSignal initialization failed:', error);
-      // Don't block app loading if OneSignal fails
-    });
+    // Detect iOS Safari
+    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    
+    // Initialize OneSignal with iOS-specific handling
+    const initOneSignal = async () => {
+      try {
+        if (isIOSSafari) {
+          // Add a small delay for iOS Safari to ensure DOM is ready
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        await initializeOneSignal();
+      } catch (error) {
+        console.error('OneSignal initialization failed:', error);
+        // Don't block app loading if OneSignal fails - especially critical for iOS
+      }
+    };
+    
+    initOneSignal();
   }, []);
 
   return (
