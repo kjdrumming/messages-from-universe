@@ -10,16 +10,55 @@ const AuthCallback = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.error('⏰ Auth callback timeout - redirecting home');
+        toast.error('Authentication is taking too long. Please try again.');
+        navigate('/');
+      }, 15000); // 15 second timeout
+
       try {
         console.log('🔍 Auth callback starting...');
         console.log('🔍 Current URL:', window.location.href);
         console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
         console.log('🔍 URL hash:', window.location.hash);
+        console.log('🔍 User agent:', navigator.userAgent);
 
         // Show progress to user
         toast.info('Processing authentication...');
 
-        // Try to exchange the URL hash for a session
+        // Check if we have tokens in the URL (mobile Safari sometimes needs this)
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token');
+        const accessToken = urlParams.get('access_token') || hashParams.get('access_token');
+        
+        console.log('🔍 URL tokens found:', { 
+          hasRefresh: !!refreshToken, 
+          hasAccess: !!accessToken,
+          searchLength: window.location.search.length,
+          hashLength: window.location.hash.length
+        });
+
+        // If we have tokens in URL, set the session first
+        if (refreshToken && accessToken) {
+          console.log('🔍 Setting session from URL tokens...');
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (sessionError) {
+            console.error('❌ Failed to set session from URL:', sessionError);
+            toast.error(`Session error: ${sessionError.message}`);
+            navigate('/');
+            return;
+          }
+          
+          console.log('✅ Session set from URL tokens successfully');
+        }
+
+        // Now try to get the current session
         const { data, error } = await supabase.auth.getSession();
         console.log('🔍 getSession result:', { data, error });
         
@@ -144,6 +183,9 @@ const AuthCallback = () => {
         console.error('Unexpected error during auth callback:', error);
         toast.error('Something went wrong. Please try again.');
         navigate('/');
+      } finally {
+        // Clear the timeout since we're done
+        clearTimeout(timeoutId);
       }
     };
 
