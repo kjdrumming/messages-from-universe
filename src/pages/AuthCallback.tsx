@@ -14,17 +14,26 @@ const AuthCallback = () => {
         console.log('🔍 Auth callback starting...');
         console.log('🔍 Current URL:', window.location.href);
         console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
+        console.log('🔍 URL hash:', window.location.hash);
+
+        // Show progress to user
+        toast.info('Processing authentication...');
 
         // Try to exchange the URL hash for a session
         const { data, error } = await supabase.auth.getSession();
+        console.log('🔍 getSession result:', { data, error });
         
         if (error) {
           console.error('❌ Auth callback error:', error);
+          toast.error(`Auth error: ${error.message}`);
           
           // Try to get session from URL if getSession failed
           const urlParams = new URLSearchParams(window.location.search);
-          const refreshToken = urlParams.get('refresh_token');
-          const accessToken = urlParams.get('access_token');
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token');
+          const accessToken = urlParams.get('access_token') || hashParams.get('access_token');
+          
+          console.log('🔍 URL tokens:', { refreshToken: !!refreshToken, accessToken: !!accessToken });
           
           if (refreshToken && accessToken) {
             console.log('🔍 Trying to set session from URL params...');
@@ -35,14 +44,14 @@ const AuthCallback = () => {
             
             if (sessionError) {
               console.error('❌ Failed to set session:', sessionError);
-              toast.error('Authentication failed. Please try again.');
+              toast.error(`Session error: ${sessionError.message}`);
               navigate('/');
               return;
             }
             
             console.log('✅ Session set successfully:', sessionData);
           } else {
-            toast.error('Authentication failed. Please try again.');
+            toast.error('No auth tokens found in URL. Please try again.');
             navigate('/');
             return;
           }
