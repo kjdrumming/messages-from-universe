@@ -10,8 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Bell, Heart, Sparkles, User, Settings, Mail, Star, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
-import type { CustomerUser } from '@/lib/supabase';
+import { supabase, type CustomerUser } from '@/lib/supabase';
+import { setOneSignalUserId } from '@/lib/oneSignal';
 import { NotificationSchedulesManager } from './NotificationSchedulesManager';
 import { SessionManager, withSessionCheck } from '@/lib/session-manager';
 
@@ -301,6 +301,15 @@ const CustomerApp = ({ onBack }: CustomerAppProps) => {
 
       await loadCustomerProfile(authUserId);
       setIsLoggedIn(true);
+
+      // Set OneSignal user ID for push notifications
+      try {
+        await setOneSignalUserId(authUserId);
+        console.log('✅ OneSignal user ID set for customer:', authUserId);
+      } catch (oneSignalError) {
+        console.warn('⚠️ OneSignal user ID setup failed (non-blocking):', oneSignalError);
+        // Don't block login if OneSignal fails
+      }
     } catch (error) {
       console.error('Error handling auth success:', error);
       toast.error('Failed to complete sign-in');

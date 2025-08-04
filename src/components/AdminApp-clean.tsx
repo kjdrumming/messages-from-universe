@@ -12,6 +12,7 @@ import { auth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import type { AdminUser, MotivationalMessage } from '@/lib/supabase';
 import { SessionManager, withSessionCheck } from '@/lib/session-manager';
+import { setOneSignalUserId } from '@/lib/oneSignal';
 
 interface Message {
   id: string;
@@ -154,6 +155,15 @@ const AdminApp = ({ onBack }: AdminAppProps) => {
 
       await loadAdminProfile(authUserId);
       setIsLoggedIn(true);
+
+      // Set OneSignal user ID for admin notifications
+      try {
+        await setOneSignalUserId(`admin_${authUserId}`);
+        console.log('✅ OneSignal admin user ID set:', `admin_${authUserId}`);
+      } catch (oneSignalError) {
+        console.warn('⚠️ OneSignal admin setup failed (non-blocking):', oneSignalError);
+        // Don't block login if OneSignal fails
+      }
     } catch (error) {
       console.error('Error handling admin auth success:', error);
       toast.error('Failed to complete admin sign-in');
