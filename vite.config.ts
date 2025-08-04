@@ -21,5 +21,21 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: 'es2017',
+    commonjsOptions: {
+      include: [/node_modules/],
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2017',
+      // Force all dependencies to be transpiled
+      // This helps with iOS Safari compatibility
+      supported: {
+        'top-level-await': true,
+      },
+    },
+    include: [
+      // Add all major dependencies here if needed
+    ],
   },
 }));
