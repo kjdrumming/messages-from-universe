@@ -99,6 +99,9 @@ const AuthCallback = () => {
         // Get the latest session
         const { data: currentSession } = await supabase.auth.getSession();
         console.log('🔍 Current session:', currentSession);
+        console.log('🔍 Session user:', currentSession.session?.user);
+        console.log('🔍 User ID:', currentSession.session?.user?.id);
+        console.log('🔍 User email:', currentSession.session?.user?.email);
 
         if (currentSession.session && currentSession.session.user) {
           const user = currentSession.session.user;
@@ -114,7 +117,9 @@ const AuthCallback = () => {
           console.log('Final portal selection:', requestedUserType);
           
           // Get user's current profiles
+          console.log('🔍 Getting user profile for ID:', user.id);
           const userProfile = await auth.getUserProfile(user.id);
+          console.log('🔍 User profile result:', userProfile);
           
           // Handle the requested user type
           if (requestedUserType === 'unified') {

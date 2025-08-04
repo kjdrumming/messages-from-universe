@@ -130,11 +130,73 @@ export const getOneSignalSubscription = async () => {
 // Manually prompt for notification permission
 export const promptForPushNotifications = async () => {
   try {
+    console.log('🔔 Triggering notification permission popup...');
+    
+    if (!window.OneSignal) {
+      console.log('⏳ OneSignal not ready, initializing...');
+      await initializeOneSignal();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     if (window.OneSignal) {
-      await window.OneSignal.Slidedown.promptPush();
+      // Method 1: Use OneSignal's permission request
+      const permission = await window.OneSignal.Notifications.requestPermission();
+      console.log('🔍 OneSignal permission result:', permission);
+      return permission;
+    } else {
+      // Method 2: Fallback to native browser API
+      console.log('🔔 Using native browser notification API...');
+      const permission = await Notification.requestPermission();
+      console.log('🔍 Native permission result:', permission);
+      return permission === 'granted';
     }
   } catch (error) {
     console.error('Error prompting for push notifications:', error);
+    
+    // Method 3: Last resort - native API
+    try {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    } catch (nativeError) {
+      console.error('Native notification request also failed:', nativeError);
+      return false;
+    }
+  }
+};
+
+// Simple function to show notification popup immediately
+export const showNotificationPopup = async () => {
+  try {
+    console.log('🚨 Showing notification permission popup...');
+    
+    // Check current permission status
+    const currentPermission = Notification.permission;
+    console.log('Current permission status:', currentPermission);
+    
+    if (currentPermission === 'granted') {
+      console.log('✅ Notifications already granted');
+      return { success: true, alreadyGranted: true };
+    }
+    
+    if (currentPermission === 'denied') {
+      console.log('❌ Notifications previously denied');
+      return { success: false, error: 'Previously denied - check browser settings' };
+    }
+    
+    // Request permission
+    const permission = await promptForPushNotifications();
+    
+    if (permission) {
+      console.log('✅ Notification permission granted!');
+      return { success: true, justGranted: true };
+    } else {
+      console.log('❌ Notification permission denied');
+      return { success: false, error: 'Permission denied' };
+    }
+    
+  } catch (error) {
+    console.error('Error showing notification popup:', error);
+    return { success: false, error: error.message };
   }
 };
 

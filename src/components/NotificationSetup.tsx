@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Bell, BellOff, Smartphone, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { getOneSignalSubscription, promptForPushNotifications, subscribeUserToOneSignal } from '@/lib/oneSignal';
+import { getOneSignalSubscription, showNotificationPopup, subscribeUserToOneSignal } from '@/lib/oneSignal';
 
 interface NotificationSetupProps {
   userId: string;
@@ -52,14 +52,25 @@ export const NotificationSetup = ({ userId, userEmail, onComplete }: Notificatio
     try {
       console.log('🔔 Starting notification setup...');
       
+      // First, show the notification permission popup
+      const permissionResult = await showNotificationPopup();
+      
+      if (!permissionResult.success) {
+        if (permissionResult.error === 'Permission denied') {
+          toast.error('Notifications were blocked. You can enable them later in your browser settings.');
+        } else {
+          toast.error(`Failed to get notification permission: ${permissionResult.error}`);
+        }
+        return;
+      }
+      
+      // Permission granted, now subscribe the user to OneSignal
       const result = await subscribeUserToOneSignal(userId, userEmail);
       
       if (result.success) {
         toast.success('🔔 Notifications enabled! You\'ll receive daily zen messages.');
         setSubscriptionStatus(prev => prev ? { ...prev, isSubscribed: true, hasPermission: true } : null);
         onComplete?.();
-      } else if (result.error === 'Permission denied') {
-        toast.error('Notifications were blocked. You can enable them later in your browser settings.');
       } else {
         toast.error(`Failed to enable notifications: ${result.error}`);
       }
