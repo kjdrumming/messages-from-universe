@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>Hello React Test</title>
+    <style>
+      body { font-family: sans-serif; background: #fff; color: #222; text-align: center; padding: 2em; }
+    </style>
+    <!-- Load React and ReactDOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      ReactDOM.createRoot(document.getElementById('root')).render(
+        React.createElement('h1', null, 'Hello from React!')
+      );
+    </script>
+    <p>If you see "Hello from React!" above, React is working on your iPhone.</p>
+  </body>
+</html>
